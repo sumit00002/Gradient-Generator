@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Gradient Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <div class="container mx-auto px-4 py-8 flex-grow">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Advanced Gradient Generator</h1>
+            <p class="text-gray-600">Create, customize and export beautiful CSS gradients</p>
+        </header>
+
+        <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+            <!-- Main Content -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-0">
+                <!-- Left Panel - Preview -->
+                <div class="lg:col-span-2 p-6 border-r border-gray-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800">Preview</h2>
+                        <div class="flex space-x-2">
+                            <button id="randomBtn" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md text-sm flex items-center">
+                                <i class="fas fa-random mr-1"></i> Random
+                            </button>
+                            <button id="saveBtn" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md text-sm flex items-center">
+                                <i class="far fa-heart mr-1"></i> Save
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="gradientPreview" class="w-full h-80 rounded-xl shadow-inner mb-4 relative overflow-hidden">
+                        <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-sm text-center">
+                            Click to download PNG
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <button data-angle="0" class="direction-btn px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm">
+                            <i class="fas fa-arrow-up mr-1"></i> Top
+                        </button>
+                        <button data-angle="90" class="direction-btn px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm">
+                            <i class="fas fa-arrow-right mr-1"></i> Right
+                        </button>
+                        <button data-angle="180" class="direction-btn px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm">
+                            <i class="fas fa-arrow-down mr-1"></i> Bottom
+                        </button>
+                        <button data-angle="270" class="direction-btn px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm">
+                            <i class="fas fa-arrow-left mr-1"></i> Left
+                        </button>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-medium text-gray-700">CSS Output</h3>
+                            <div class="flex space-x-2">
+                                <button class="export-format active" data-format="css">CSS</button>
+                                <button class="export-format" data-format="tailwind">Tailwind</button>
+                                <button class="export-format" data-format="react">React</button>
+                                <button class="export-format" data-format="js">JS</button>
+                            </div>
+                        </div>
+                        <div id="cssOutput" class="font-mono text-sm text-gray-800 p-3 bg-white rounded overflow-x-auto"></div>
+                        <div class="mt-3 flex justify-end">
+                            <button id="copyBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center">
+                                <i class="far fa-copy mr-2"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel - Controls -->
+                <div class="p-6">
+                    <div class="mb-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Controls</h2>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Gradient Type</label>
+                            <div class="flex space-x-2">
+                                <button id="linearType" class="gradient-type-btn active px-3 py-1 bg-blue-100 text-blue-800 rounded-md">Linear</button>
+                                <button id="radialType" class="gradient-type-btn px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md">Radial</button>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="angle" class="block text-sm font-medium text-gray-700 mb-1">Angle: <span id="angleValue">90</span>°</label>
+                            <input type="range" id="angle" min="0" max="360" value="90" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+
+                    <div id="colorControls">
+                        <!-- Color stops will be added here dynamically -->
+                    </div>
+
+                    <div class="mt-4">
+                        <button id="addColorBtn" class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm flex items-center justify-center">
+                            <i class="fas fa-plus mr-2"></i> Add Color Stop
+                        </button>
+                    </div>
+
+                    <div class="mt-6">
+                        <h3 class="font-medium text-gray-700 mb-2">Preset Gradients</h3>
+                        <div id="presetGradients" class="grid grid-cols-3 gap-2">
+                            <!-- Presets will be added here dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg"></div>
+
+    <!-- History Panel (hidden by default) -->
+    <div id="historyPanel" class="fixed inset-y-0 right-0 w-64 bg-white shadow-lg transform translate-x-full transition-transform duration-300 z-50 overflow-y-auto">
+        <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+            <h3 class="font-semibold text-lg">Saved Gradients</h3>
+            <button id="closeHistoryBtn" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="savedGradients" class="p-4 space-y-3">
+            <!-- Saved gradients will appear here -->
+        </div>
+    </div>
+
+    <!-- History Toggle Button -->
+    <button id="historyToggleBtn" class="fixed right-4 bottom-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 z-40">
+        <i class="fas fa-history"></i>
+    </button>
+
+    <script src="script.js"></script>
+</body>
+</html> 
