@@ -16,9 +16,7 @@
         </header>
 
         <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-            <!-- Main Content -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-0">
-                <!-- Left Panel - Preview -->
                 <div class="lg:col-span-2 p-6 border-r border-gray-100">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-semibold text-gray-800">Preview</h2>
@@ -72,11 +70,10 @@
                     </div>
                 </div>
 
-                <!-- Right Panel - Controls -->
                 <div class="p-6">
                     <div class="mb-6">
                         <h2 class="text-xl font-semibold text-gray-800 mb-4">Controls</h2>
-                        
+
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Gradient Type</label>
                             <div class="flex space-x-2">
@@ -85,15 +82,43 @@
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <label for="angle" class="block text-sm font-medium text-gray-700 mb-1">Angle: <span id="angleValue">90</span>°</label>
-                            <input type="range" id="angle" min="0" max="360" value="90" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        <div id="linearControls">
+                            <div class="mb-4">
+                                <label for="angle" class="block text-sm font-medium text-gray-700 mb-1">Angle: <span id="angleValue">90</span>°</label>
+                                <input type="range" id="angle" min="0" max="360" value="90" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            </div>
+                            <div class="mb-4 flex items-center">
+                                <input type="checkbox" id="repeatingLinear" class="mr-2">
+                                <label for="repeatingLinear" class="text-sm text-gray-700">Repeating</label>
+                            </div>
+                        </div>
+
+                        <div id="radialControls" class="hidden">
+                            <div class="mb-4">
+                                <label for="shapeRadial" class="block text-sm font-medium text-gray-700 mb-1">Shape</label>
+                                <select id="shapeRadial" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm">
+                                    <option value="circle">Circle</option>
+                                    <option value="ellipse">Ellipse</option>
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label for="sizeRadial" class="block text-sm font-medium text-gray-700 mb-1">Size</label>
+                                <select id="sizeRadial" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm">
+                                    <option value="closest-side">Closest Side</option>
+                                    <option value="farthest-side">Farthest Side</option>
+                                    <option value="closest-corner">Closest Corner</option>
+                                    <option value="farthest-corner">Farthest Corner</option>
+                                </select>
+                            </div>
+                            <div class="mb-4 flex items-center">
+                                <input type="checkbox" id="repeatingRadial" class="mr-2">
+                                <label for="repeatingRadial" class="text-sm text-gray-700">Repeating</label>
+                            </div>
                         </div>
                     </div>
 
                     <div id="colorControls">
-                        <!-- Color stops will be added here dynamically -->
-                    </div>
+                        </div>
 
                     <div class="mt-4">
                         <button id="addColorBtn" class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm flex items-center justify-center">
@@ -104,18 +129,15 @@
                     <div class="mt-6">
                         <h3 class="font-medium text-gray-700 mb-2">Preset Gradients</h3>
                         <div id="presetGradients" class="grid grid-cols-3 gap-2">
-                            <!-- Presets will be added here dynamically -->
-                        </div>
+                            </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notification -->
     <div id="toast" class="toast hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg"></div>
 
-    <!-- History Panel (hidden by default) -->
     <div id="historyPanel" class="fixed inset-y-0 right-0 w-64 bg-white shadow-lg transform translate-x-full transition-transform duration-300 z-50 overflow-y-auto">
         <div class="p-4 border-b border-gray-200 flex justify-between items-center">
             <h3 class="font-semibold text-lg">Saved Gradients</h3>
@@ -124,15 +146,13 @@
             </button>
         </div>
         <div id="savedGradients" class="p-4 space-y-3">
-            <!-- Saved gradients will appear here -->
-        </div>
+            </div>
     </div>
 
-    <!-- History Toggle Button -->
     <button id="historyToggleBtn" class="fixed right-4 bottom-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 z-40">
         <i class="fas fa-history"></i>
     </button>
 
     <script src="script.js"></script>
 </body>
-</html> 
+</html>

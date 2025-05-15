@@ -19,13 +19,20 @@ document.addEventListener('DOMContentLoaded', function() {
         historyPanel: document.getElementById('historyPanel'),
         historyToggleBtn: document.getElementById('historyToggleBtn'),
         closeHistoryBtn: document.getElementById('closeHistoryBtn'),
-        savedGradients: document.getElementById('savedGradients')
+        savedGradients: document.getElementById('savedGradients'),
+        repeatingLinear: document.getElementById('repeatingLinear'),
+        repeatingRadial: document.getElementById('repeatingRadial'),
+        shapeRadial: document.getElementById('shapeRadial'), // New: Shape for radial
+        sizeRadial: document.getElementById('sizeRadial'),   // New: Size for radial
     };
 
     // State
     let state = {
         gradientType: 'linear',
+        repeating: false,
         angle: 90,
+        radialShape: 'circle', // circle or ellipse
+        radialSize: 'closest-side', // closest-side, farthest-side, closest-corner, farthest-corner
         colorStops: [
             { id: 1, color: '#3b82f6', position: 0, opacity: 1 },
             { id: 2, color: '#8b5cf6', position: 100, opacity: 1 }
@@ -39,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateGradient();
     renderPresetGradients();
     renderSavedGradients();
+    updateRadialControlsVisibility();
 
     // Event Listeners
     elements.angleInput.addEventListener('input', function() {
@@ -53,6 +61,10 @@ document.addEventListener('DOMContentLoaded', function() {
     elements.addColorBtn.addEventListener('click', addColorStop);
     elements.linearType.addEventListener('click', () => setGradientType('linear'));
     elements.radialType.addEventListener('click', () => setGradientType('radial'));
+    elements.repeatingLinear.addEventListener('change', () => { state.repeating = elements.repeatingLinear.checked; updateGradient(); });
+    elements.repeatingRadial.addEventListener('change', () => { state.repeating = elements.repeatingRadial.checked; updateGradient(); });
+    elements.shapeRadial.addEventListener('change', () => { state.radialShape = elements.shapeRadial.value; updateGradient(); });
+    elements.sizeRadial.addEventListener('change', () => { state.radialSize = elements.sizeRadial.value; updateGradient(); });
     elements.gradientPreview.addEventListener('click', downloadAsPNG);
     elements.historyToggleBtn.addEventListener('click', toggleHistoryPanel);
     elements.closeHistoryBtn.addEventListener('click', toggleHistoryPanel);
@@ -63,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
             elements.angleInput.value = state.angle;
             elements.angleValue.textContent = state.angle;
             updateGradient();
-            
+
             // Update active state
             elements.directionBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
@@ -74,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             state.currentFormat = this.dataset.format;
             updateGradient();
-            
+
             // Update active state
             elements.exportFormatBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
@@ -91,30 +103,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function createColorControl(stop) {
         const control = document.createElement('div');
-        control.className = 'color-picker-container mb-4';
+        control.className = 'color-picker-container mb-6 p-4 bg-gray-50 rounded-md border border-gray-200';
         control.dataset.id = stop.id;
-        
+
         control.innerHTML = `
-            <div class="flex justify-between items-center mb-1">
-                <label class="text-sm font-medium text-gray-700">Color Stop ${stop.id}</label>
+            <div class="flex justify-between items-center mb-2">
+                <label class="text-sm font-medium text-gray-700">Stop #${stop.id}</label>
                 ${stop.id > 2 ? `<button class="delete-stop text-red-500 hover:text-red-700 text-sm" data-id="${stop.id}">
                     <i class="fas fa-trash-alt"></i>
                 </button>` : ''}
             </div>
-            <div class="flex items-center mb-1">
-                <input type="color" value="${stop.color}" class="color-input w-8 h-8 cursor-pointer mr-2">
-                <input type="text" value="${stop.color}" class="color-hex px-2 py-1 border border-gray-300 rounded-md text-sm flex-grow">
-                <input type="number" min="0" max="100" value="${stop.opacity * 100}" class="opacity-input ml-2 w-16 px-2 py-1 border border-gray-300 rounded-md text-sm">
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Color</label>
+                <div class="flex items-center">
+                    <input type="color" value="${stop.color}" class="color-input w-10 h-10 cursor-pointer mr-2">
+                    <input type="text" value="${stop.color}" class="color-hex px-2 py-1 border border-gray-300 rounded-md text-sm flex-grow">
+                </div>
             </div>
-            <div class="relative mt-2 h-2 bg-gray-200 rounded-full">
-                <div class="absolute top-0 bottom-0 left-0 right-0" style="background: linear-gradient(to right, ${state.colorStops[0].color}, ${state.colorStops[state.colorStops.length - 1].color})"></div>
-                <div class="color-stop-handle" style="left: ${stop.position}%" data-id="${stop.id}"></div>
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Opacity</label>
+                <input type="number" min="0" max="100" value="${stop.opacity * 100}" class="opacity-input w-full px-2 py-1 border border-gray-300 rounded-md text-sm">
             </div>
-            <input type="range" min="0" max="100" value="${stop.position}" class="position-slider w-full mt-2">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Position (%)</label>
+                <div class="relative h-6 bg-gray-200 rounded-full mb-1">
+                    <div class="absolute top-0 bottom-0 left-0 right-0 rounded-full" style="background: linear-gradient(to right, ${state.colorStops.slice().sort((a, b) => a.position - b.position).map(s => s.color).join(', ')})"></div>
+                    <div class="color-stop-handle absolute top-1/2 left-${stop.position}% transform -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full cursor-grab shadow" style="left: ${stop.position}%;" data-id="${stop.id}"></div>
+                </div>
+                <input type="range" min="0" max="100" value="${stop.position}" class="position-slider w-full">
+            </div>
         `;
-        
+
         elements.colorControls.appendChild(control);
-        
+
         // Add event listeners to the new controls
         const colorInput = control.querySelector('.color-input');
         const colorHex = control.querySelector('.color-hex');
@@ -122,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const positionSlider = control.querySelector('.position-slider');
         const deleteBtn = control.querySelector('.delete-stop');
         const handle = control.querySelector('.color-stop-handle');
-        
+
         colorInput.addEventListener('input', function() {
             const id = parseInt(control.dataset.id);
             const stop = state.colorStops.find(s => s.id === id);
@@ -130,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
             colorHex.value = this.value;
             updateGradient();
         });
-        
+
         colorHex.addEventListener('input', function() {
             if (isValidHex(this.value)) {
                 const id = parseInt(control.dataset.id);
@@ -140,52 +161,53 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateGradient();
             }
         });
-        
+
         opacityInput.addEventListener('input', function() {
             const id = parseInt(control.dataset.id);
             const stop = state.colorStops.find(s => s.id === id);
-            stop.opacity = parseInt(this.value) / 100;
+            stop.opacity = parseFloat(this.value) / 100;
             updateGradient();
         });
-        
+
         positionSlider.addEventListener('input', function() {
             const id = parseInt(control.dataset.id);
             const stop = state.colorStops.find(s => s.id === id);
             stop.position = parseInt(this.value);
-            handle.style.left = `${stop.position}%`;
+            handle.style.left = `${this.value}%`;
             updateGradient();
         });
-        
+
         if (deleteBtn) {
             deleteBtn.addEventListener('click', function() {
                 const id = parseInt(this.dataset.id);
                 removeColorStop(id);
             });
         }
-        
+
         // Make handle draggable
         makeDraggable(handle, positionSlider);
     }
 
     function makeDraggable(handle, slider) {
-        const container = handle.parentElement;
+        const container = handle.parentElement.parentElement; // Go up to the container of the handle
         let isDragging = false;
-        
+
         handle.addEventListener('mousedown', function(e) {
             isDragging = true;
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
+            handle.classList.add('cursor-grabbing');
             e.preventDefault();
         });
-        
+
         function onMouseMove(e) {
             if (!isDragging) return;
-            
+
             const containerRect = container.getBoundingClientRect();
             let pos = (e.clientX - containerRect.left) / containerRect.width;
             pos = Math.max(0, Math.min(1, pos));
             const percentage = Math.round(pos * 100);
-            
+
             const id = parseInt(handle.dataset.id);
             const stop = state.colorStops.find(s => s.id === id);
             stop.position = percentage;
@@ -193,39 +215,37 @@ document.addEventListener('DOMContentLoaded', function() {
             slider.value = percentage;
             updateGradient();
         }
-        
+
         function onMouseUp() {
             isDragging = false;
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
+            handle.classList.remove('cursor-grabbing');
         }
     }
 
     function updateGradient() {
         // Sort color stops by position
         state.colorStops.sort((a, b) => a.position - b.position);
-        
+
         // Generate gradient string based on type
         let gradientString;
+        const stops = state.colorStops.map(stop => {
+            const rgba = hexToRgba(stop.color, stop.opacity);
+            return `${rgba} ${stop.position}%`;
+        }).join(', ');
+
         if (state.gradientType === 'linear') {
-            gradientString = `linear-gradient(${state.angle}deg, `;
-            gradientString += state.colorStops.map(stop => {
-                const rgba = hexToRgba(stop.color, stop.opacity);
-                return `${rgba} ${stop.position}%`;
-            }).join(', ');
-            gradientString += ')';
+            const repeating = state.repeating ? 'repeating-' : '';
+            gradientString = `${repeating}linear-gradient(${state.angle}deg, ${stops})`;
         } else {
-            gradientString = `radial-gradient(circle, `;
-            gradientString += state.colorStops.map(stop => {
-                const rgba = hexToRgba(stop.color, stop.opacity);
-                return `${rgba} ${stop.position}%`;
-            }).join(', ');
-            gradientString += ')';
+            const repeating = state.repeating ? 'repeating-' : '';
+            gradientString = `${repeating}radial-gradient(${state.radialShape} ${state.radialSize}, ${stops})`;
         }
-        
+
         // Update preview
         elements.gradientPreview.style.backgroundImage = gradientString;
-        
+
         // Update output based on current format
         let outputText;
         switch (state.currentFormat) {
@@ -233,43 +253,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 outputText = `background: ${gradientString};`;
                 break;
             case 'tailwind':
-                // This is a simplified version - Tailwind doesn't support dynamic gradients
-                outputText = `You'll need to add this to your Tailwind config:\n\nmodule.exports = {
-  theme: {
-    extend: {
-      backgroundImage: {
-        'my-gradient': '${gradientString}'
-      }
-    }
-  }
-}`;
+                outputText = `/* Add this to your tailwind.config.js */\nmodule.exports = {\n  theme: {\n    extend: {\n      backgroundImage: {\n        'my-gradient': '${gradientString}',\n      },\n    },\n  },\n  plugins: [],\n}`;
+                outputText += `\n\n/* Use it like this in your HTML/JSX */\n<div className="bg-my-gradient h-48 w-96"></div>`;
                 break;
             case 'react':
-                outputText = `<div style={{ 
-  background: '${gradientString}'
-}}></div>`;
+                outputText = `<div style={{ background: '${gradientString}', width: '300px', height: '200px' }}></div>`;
                 break;
             case 'js':
-                outputText = `element.style.background = '${gradientString}';`;
+                outputText = `const element = document.getElementById('yourElementId');\nelement.style.background = '${gradientString}';`;
                 break;
             default:
                 outputText = `background: ${gradientString};`;
         }
-        
+
         elements.cssOutput.textContent = outputText;
-        
-        // Update position slider backgrounds
-        document.querySelectorAll('.color-picker-container').forEach(container => {
-            const gradientPreview = container.querySelector('.color-stop-handle').parentElement;
-            const firstColor = state.colorStops[0].color;
-            const lastColor = state.colorStops[state.colorStops.length - 1].color;
-            gradientPreview.style.background = `linear-gradient(to right, ${firstColor}, ${lastColor})`;
-        });
     }
 
     function copyCSSToClipboard() {
         const cssText = elements.cssOutput.textContent;
-        
+
         navigator.clipboard.writeText(cssText).then(() => {
             showToast('Copied to clipboard!');
         }).catch(err => {
@@ -279,49 +281,57 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function generateRandomGradient() {
-        // Generate random colors
-        state.colorStops.forEach(stop => {
-            stop.color = getRandomColor();
-            stop.opacity = 1;
-            if (stop.id === 1) stop.position = 0;
-            else if (stop.id === state.colorStops.length) stop.position = 100;
-            else stop.position = Math.floor(Math.random() * 100);
-        });
-        
-        // Random angle for linear gradients
+        const numStops = Math.floor(Math.random() * 3) + 2; // 2 to 4 color stops
+        state.colorStops = Array.from({ length: numStops }, (_, i) => ({
+            id: i + 1,
+            color: getRandomColor(),
+            position: Math.round((i / (numStops - 1)) * 100),
+            opacity: Math.random()
+        })).sort((a, b) => a.position - b.position);
+
         if (state.gradientType === 'linear') {
             state.angle = Math.floor(Math.random() * 360);
             elements.angleInput.value = state.angle;
             elements.angleValue.textContent = state.angle;
         }
-        
-        // Update UI
+
         initColorControls();
         updateGradient();
     }
 
     function addColorStop() {
-        const newId = state.colorStops.length > 0 ? 
+        const newId = state.colorStops.length > 0 ?
             Math.max(...state.colorStops.map(s => s.id)) + 1 : 1;
-        
-        // Position new stop in the middle of the two surrounding stops
+
         let position = 50;
         if (state.colorStops.length >= 2) {
-            const middleIndex = Math.floor(state.colorStops.length / 2);
-            const prevPos = state.colorStops[middleIndex - 1].position;
-            const nextPos = state.colorStops[middleIndex].position;
-            position = Math.round((prevPos + nextPos) / 2);
+            // Find a gap to place the new stop
+            state.colorStops.sort((a, b) => a.position - b.position);
+            let bestGapIndex = -1;
+            let maxGap = -1;
+            for (let i = 0; i < state.colorStops.length - 1; i++) {
+                const gap = state.colorStops[i + 1].position - state.colorStops[i].position;
+                if (gap > maxGap) {
+                    maxGap = gap;
+                    bestGapIndex = i;
+                }
+            }
+            if (bestGapIndex !== -1) {
+                position = Math.round((state.colorStops[bestGapIndex].position + state.colorStops[bestGapIndex + 1].position) / 2);
+            } else {
+                position = 50;
+            }
         }
-        
+
         const newStop = {
             id: newId,
             color: getRandomColor(),
             position: position,
             opacity: 1
         };
-        
+
         state.colorStops.push(newStop);
-        createColorControl(newStop);
+        initColorControls();
         updateGradient();
     }
 
@@ -330,7 +340,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('You need at least 2 color stops');
             return;
         }
-        
+
         state.colorStops = state.colorStops.filter(stop => stop.id !== id);
         initColorControls();
         updateGradient();
@@ -338,15 +348,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function setGradientType(type) {
         state.gradientType = type;
-        
+
         // Update UI
         elements.linearType.classList.toggle('active', type === 'linear');
         elements.radialType.classList.toggle('active', type === 'radial');
-        
-        // Disable angle for radial gradients
-        elements.angleInput.disabled = type === 'radial';
-        
+        document.getElementById('linearControls').classList.toggle('hidden', type !== 'linear');
+        document.getElementById('radialControls').classList.toggle('hidden', type !== 'radial');
+
         updateGradient();
+    }
+
+    function updateRadialControlsVisibility() {
+        document.getElementById('linearControls').classList.toggle('hidden', state.gradientType !== 'linear');
+        document.getElementById('radialControls').classList.toggle('hidden', state.gradientType !== 'radial');
     }
 
     function renderPresetGradients() {
@@ -361,18 +375,18 @@ document.addEventListener('DOMContentLoaded', function() {
             { name: 'Deep Sea', colors: ['#2b5876', '#4e4376'] },
             { name: 'Citrus', colors: ['#FDC830', '#F37335'] }
         ];
-        
+
         elements.presetGradients.innerHTML = '';
-        
+
         presets.forEach((preset, index) => {
             const gradient = `linear-gradient(90deg, ${preset.colors[0]}, ${preset.colors[1]})`;
-            
+
             const presetEl = document.createElement('div');
             presetEl.className = 'preset-gradient';
             presetEl.style.background = gradient;
             presetEl.title = preset.name;
             presetEl.dataset.index = index;
-            
+
             presetEl.addEventListener('click', () => {
                 state.colorStops = [
                     { id: 1, color: preset.colors[0], position: 0, opacity: 1 },
@@ -381,12 +395,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 state.angle = 90;
                 elements.angleInput.value = 90;
                 elements.angleValue.textContent = 90;
-                
+
                 initColorControls();
                 updateGradient();
                 showToast(`Loaded ${preset.name} gradient`);
             });
-            
+
             elements.presetGradients.appendChild(presetEl);
         });
     }
@@ -394,28 +408,34 @@ document.addEventListener('DOMContentLoaded', function() {
     function saveCurrentGradient() {
         const gradient = {
             type: state.gradientType,
+            repeating: state.repeating,
             angle: state.angle,
+            radialShape: state.radialShape,
+            radialSize: state.radialSize,
             colorStops: [...state.colorStops],
             createdAt: new Date().toISOString()
         };
-        
+
         // Check if this gradient is already saved
         const isDuplicate = state.savedGradients.some(saved => {
             return JSON.stringify(saved.colorStops) === JSON.stringify(gradient.colorStops) &&
                    saved.type === gradient.type &&
-                   saved.angle === gradient.angle;
+                   saved.angle === gradient.angle &&
+                   saved.repeating === gradient.repeating &&
+                   saved.radialShape === gradient.radialShape &&
+                   saved.radialSize === gradient.radialSize;
         });
-        
+
         if (isDuplicate) {
             showToast('This gradient is already saved');
             return;
         }
-        
+
         state.savedGradients.unshift(gradient);
         if (state.savedGradients.length > 10) {
             state.savedGradients.pop();
         }
-        
+
         localStorage.setItem('savedGradients', JSON.stringify(state.savedGradients));
         renderSavedGradients();
         showToast('Gradient saved to history');
@@ -423,27 +443,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderSavedGradients() {
         elements.savedGradients.innerHTML = '';
-        
+
         if (state.savedGradients.length === 0) {
             elements.savedGradients.innerHTML = '<p class="text-gray-500 text-center py-4">No saved gradients yet</p>';
             return;
         }
-        
+
         state.savedGradients.forEach((gradient, index) => {
+            const stops =  gradient.colorStops.map(stop => `${hexToRgba(stop.color, stop.opacity)} ${stop.position}%`).join(', ');
             const gradientString = gradient.type === 'linear' ?
-                `linear-gradient(${gradient.angle}deg, ` +
-                gradient.colorStops.map(stop => `${hexToRgba(stop.color, stop.opacity)} ${stop.position}%`).join(', ') +
-                ')' :
-                `radial-gradient(circle, ` +
-                gradient.colorStops.map(stop => `${hexToRgba(stop.color, stop.opacity)} ${stop.position}%`).join(', ') +
-                ')';
-            
+                (gradient.repeating ? 'repeating-' : '') + `linear-gradient(${gradient.angle}deg, ${stops})` :
+                (gradient.repeating ? 'repeating-' : '') + `radial-gradient(${gradient.radialShape} ${gradient.radialSize}, ${stops})`;
+
             const gradientEl = document.createElement('div');
             gradientEl.className = 'p-3 rounded-lg border border-gray-200 hover:border-blue-300 cursor-pointer';
             gradientEl.style.background = gradientString;
             gradientEl.style.height = '60px';
             gradientEl.style.position = 'relative';
-            
+
             const overlay = document.createElement('div');
             overlay.className = 'absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-200 rounded-lg';
             overlay.innerHTML = `
@@ -454,31 +471,38 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 </div>
             `;
-            
+
             gradientEl.appendChild(overlay);
-            
+
             gradientEl.addEventListener('click', () => {
                 loadSavedGradient(index);
             });
-            
+
             elements.savedGradients.appendChild(gradientEl);
         });
     }
 
     function loadSavedGradient(index) {
         const gradient = state.savedGradients[index];
-        
+
         state.gradientType = gradient.type;
+        state.repeating = gradient.repeating;
         state.angle = gradient.angle;
+        state.radialShape = gradient.radialShape;
+        state.radialSize = gradient.radialSize;
         state.colorStops = gradient.colorStops.map(stop => ({...stop}));
-        
+
         // Update UI
         elements.angleInput.value = state.angle;
         elements.angleValue.textContent = state.angle;
         elements.linearType.classList.toggle('active', state.gradientType === 'linear');
         elements.radialType.classList.toggle('active', state.gradientType === 'radial');
-        elements.angleInput.disabled = state.gradientType === 'radial';
-        
+        elements.repeatingLinear.checked = state.repeating && state.gradientType === 'linear';
+        elements.repeatingRadial.checked = state.repeating && state.gradientType === 'radial';
+        elements.shapeRadial.value = state.radialShape;
+        elements.sizeRadial.value = state.radialSize;
+        updateRadialControlsVisibility();
+
         initColorControls();
         updateGradient();
         toggleHistoryPanel();
@@ -493,10 +517,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const canvas = document.createElement('canvas');
         canvas.width = elements.gradientPreview.offsetWidth;
         canvas.height = elements.gradientPreview.offsetHeight;
-        
+
         const ctx = canvas.getContext('2d');
         const gradient = window.getComputedStyle(elements.gradientPreview).backgroundImage;
-        
+
         // Create gradient on canvas
         if (state.gradientType === 'linear') {
             const angleRad = (state.angle - 90) * Math.PI / 180;
@@ -504,28 +528,31 @@ document.addEventListener('DOMContentLoaded', function() {
             const y1 = canvas.height / 2 + Math.sin(angleRad) * canvas.height / 2;
             const x2 = canvas.width / 2 - Math.cos(angleRad) * canvas.width / 2;
             const y2 = canvas.height / 2 - Math.sin(angleRad) * canvas.height / 2;
-            
+
             const canvasGradient = ctx.createLinearGradient(x1, y1, x2, y2);
             state.colorStops.forEach(stop => {
                 canvasGradient.addColorStop(stop.position / 100, hexToRgba(stop.color, stop.opacity));
             });
-            
+
             ctx.fillStyle = canvasGradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         } else {
+             // For radial gradients
             const canvasGradient = ctx.createRadialGradient(
-                canvas.width / 2, canvas.height / 2, 0,
-                canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height) / 2
+                canvas.width / 2,
+                canvas.height / 2,
+                0,
+                canvas.width / 2,
+                canvas.height / 2,
+                Math.max(canvas.width, canvas.height) / 2
             );
-            
             state.colorStops.forEach(stop => {
-                canvasGradient.addColorStop(stop.position / 100, hexToRgba(stop.color, stop.opacity));
+                canvasGradient.addColorStop(stop.position/100, hexToRgba(stop.color, stop.opacity));
             });
-            
             ctx.fillStyle = canvasGradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
-        
+
         // Download
         const link = document.createElement('a');
         link.download = 'gradient.png';
@@ -537,7 +564,7 @@ document.addEventListener('DOMContentLoaded', function() {
         elements.toast.textContent = message;
         elements.toast.classList.remove('hidden');
         elements.toast.classList.add('show');
-        
+
         setTimeout(() => {
             elements.toast.classList.remove('show');
             setTimeout(() => elements.toast.classList.add('hidden'), 300);
@@ -567,7 +594,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function hexToRgba(hex, opacity = 1) {
         let r = 0, g = 0, b = 0;
-        
+
         // 3 digits
         if (hex.length === 4) {
             r = parseInt(hex[1] + hex[1], 16);
@@ -580,7 +607,7 @@ document.addEventListener('DOMContentLoaded', function() {
             g = parseInt(hex[3] + hex[4], 16);
             b = parseInt(hex[5] + hex[6], 16);
         }
-        
+
         return `rgba(${r}, ${g}, ${b}, ${opacity})`;
     }
 
